@@ -1,3 +1,15 @@
+# XCP-ng notice: this spec file and the associated source come from
+# the spl source RPM created out of the spl upstream build scripts.
+# The 'upstream' branch of this repository contains the unmodified
+# spec file and sources from that source RPM.
+# It was produced this way:
+# - start xcp-ng-build-env
+# - download latest release of spl at https://github.com/zfsonlinux/zfs/releases
+# - extract it
+# - install kernel-devel
+# - ./configure
+# - make srpms
+
 %define module  zfs
 
 %if !%{defined ksrc}
@@ -56,31 +68,16 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id} -u -n)
 # The developments headers will conflict with the dkms packages.
 Conflicts:      %{module}-dkms
 
-%if %{defined repo}
+BuildRequires: kernel-devel
 
-# Building for a repository use the proper build-sysbuild package
-# to determine which kernel-devel packages should be installed.
-BuildRequires:  %{_bindir}/kmodtool
-%{!?kernels:BuildRequires: buildsys-build-%{repo}-kerneldevpkgs-%{?buildforkernels:%{buildforkernels}}%{!?buildforkernels:current}-%{_target_cpu}}
-
-%else
-
-# Building local packages attempt to to use the installed kernel.
-%{?rhel:BuildRequires: kernel-devel}
-%{?fedora:BuildRequires: kernel-devel}
-%{?suse_version:BuildRequires: kernel-source}
-
-%if !%{defined kernels} && !%{defined build_src_rpm}
-    %if 0%{?rhel}%{?fedora}%{?suse_version}
-        %define kernels %(ls -1 /usr/src/kernels)
-    %else
-        %define kernels %(ls -1 /lib/modules)
-    %endif
-%endif
+%if !%{defined kernels}
+    %define kernels %(ls -1 /lib/modules)
 %endif
 
 %if 0%{?rhel}%{?fedora}%{?suse_version}
 BuildRequires:             kmod-spl-devel = %{version}
+# In XCP-ng we build for only one kernel at a time
+BuildRequires:             kmod-spl-devel-4.4.0+10 = %{version}
 %global KmodsRequires      kmod-spl
 %global KmodsDevelRequires kmod-spl-devel
 %global KmodsMetaRequires  spl-kmod
