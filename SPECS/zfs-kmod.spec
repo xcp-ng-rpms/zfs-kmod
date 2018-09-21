@@ -48,7 +48,7 @@
 
 Name:           %{module}-kmod
 
-Version:        0.7.9
+Version:        0.7.11
 Release:        1%{?dist}
 Summary:        Kernel module(s)
 
@@ -182,6 +182,12 @@ chmod u+x ${RPM_BUILD_ROOT}%{kmodinstdir_prefix}/*/extra/*/*/*
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Thu Sep 13 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.11-1
+- Released 0.7.11-1, detailed release notes are available at:
+- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.11
+* Wed Sep 05 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.10-1
+- Released 0.7.10-1, detailed release notes are available at:
+- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.10
 * Tue May 08 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.9-1
 - Released 0.7.9-1, detailed release notes are available at:
 - https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.9
