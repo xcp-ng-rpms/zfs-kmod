@@ -1,14 +1,8 @@
 # XCP-ng notice: this spec file and the associated source come from
-# the spl source RPM created out of the spl upstream build scripts.
+# the zfs-kmod source RPM created out of the zfs upstream build scripts.
 # The 'upstream' branch of this repository contains the unmodified
 # spec file and sources from that source RPM.
-# It was produced this way:
-# - start xcp-ng-build-env
-# - download latest release of spl at https://github.com/zfsonlinux/zfs/releases
-# - extract it
-# - install kernel-devel
-# - ./configure
-# - make srpms
+# See our zfs.spec for detailed steps.
 
 %define module  zfs
 
