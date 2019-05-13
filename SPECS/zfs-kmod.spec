@@ -76,7 +76,7 @@ BuildRequires: kernel-devel
 %if 0%{?rhel}%{?fedora}%{?suse_version}
 BuildRequires:             kmod-spl-devel = %{version}
 # In XCP-ng we build for only one kernel at a time
-BuildRequires:             kmod-spl-devel-4.4.0+10 = %{version}
+BuildRequires:             kmod-spl-devel-4.19.0+1 = %{version}
 %global KmodsRequires      kmod-spl
 %global KmodsDevelRequires kmod-spl-devel
 %global KmodsMetaRequires  spl-kmod
