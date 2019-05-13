@@ -48,7 +48,7 @@
 
 Name:           %{module}-kmod
 
-Version:        0.7.11
+Version:        0.7.13
 Release:        1%{?dist}
 Summary:        Kernel module(s)
 
@@ -58,6 +58,10 @@ URL:            http://zfsonlinux.org/
 Source0:        %{module}-%{version}.tar.gz
 Source10:       kmodtool
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id} -u -n)
+%if 0%{?rhel}%{?fedora}
+BuildRequires:  gcc, make
+BuildRequires:  elfutils-libelf-devel
+%endif
 
 # The developments headers will conflict with the dkms packages.
 Conflicts:      %{module}-dkms
@@ -183,6 +187,12 @@ chmod u+x ${RPM_BUILD_ROOT}%{kmodinstdir_prefix}/*/extra/*/*/*
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Fri Feb 22 2019 Tony Hutter <hutter2@llnl.gov> - 0.7.13-1
+- Released 0.7.13-1, detailed release notes are available at:
+- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.13
+* Thu Nov 08 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.12-1
+- Released 0.7.12-1, detailed release notes are available at:
+- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.12
 * Thu Sep 13 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.11-1
 - Released 0.7.11-1, detailed release notes are available at:
 - https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.11
