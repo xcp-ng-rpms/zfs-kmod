@@ -69,28 +69,14 @@ BuildRequires:  elfutils-libelf-devel
 # The developments headers will conflict with the dkms packages.
 Conflicts:      %{module}-dkms
 
-%if %{defined repo}
 
-# Building for a repository use the proper build-sysbuild package
-# to determine which kernel-devel packages should be installed.
-BuildRequires:  %{_bindir}/kmodtool
-%{!?kernels:BuildRequires: buildsys-build-%{repo}-kerneldevpkgs-%{?buildforkernels:%{buildforkernels}}%{!?buildforkernels:current}-%{_target_cpu}}
-
-%else
-
-# Building local packages attempt to to use the installed kernel.
-%{?rhel:BuildRequires: kernel-devel}
-%{?fedora:BuildRequires: kernel-devel}
-%{?suse_version:BuildRequires: kernel-source}
-
-%if !%{defined kernels} && !%{defined build_src_rpm}
-    %if 0%{?rhel}%{?fedora}%{?suse_version}
-        %define kernels %(ls -1 /usr/src/kernels)
-    %else
-        %define kernels %(ls -1 /lib/modules)
-    %endif
+# XCP-ng: kernel detection simplified to adapt to XS kernel directory structure and naming
+BuildRequires: kernel-devel
+%if !%{defined kernels}
+    %define kernels %(ls -1 /lib/modules)
 %endif
-%endif
+# End of XCP-ng specific section
+
 
 # LDFLAGS are not sanitized by arch/*/Makefile for these architectures.
 %ifarch ppc ppc64 ppc64le aarch64
