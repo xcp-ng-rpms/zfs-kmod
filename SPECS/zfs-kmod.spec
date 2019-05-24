@@ -6,6 +6,9 @@
 
 %define module  zfs
 
+# See comment in zfs.spec.in.
+%global __brp_mangle_shebangs_exclude_from arc_summary.py|arcstat.py|dbufstat.py|test-runner.py|zts-report.py
+
 %if !%{defined ksrc}
 %if 0%{?rhel}%{?fedora}
 %define ksrc    ${kernel_version##*___}
@@ -43,12 +46,12 @@
 #define buildforkernels akmod
 
 %bcond_with     debug
-%bcond_with     debug_dmu_tx
+%bcond_with     debuginfo
 
 
 Name:           %{module}-kmod
 
-Version:        0.7.13
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        Kernel module(s)
 
@@ -66,20 +69,27 @@ BuildRequires:  elfutils-libelf-devel
 # The developments headers will conflict with the dkms packages.
 Conflicts:      %{module}-dkms
 
-BuildRequires: gcc
-BuildRequires: kernel-devel
+%if %{defined repo}
 
-%if !%{defined kernels}
-    %define kernels %(ls -1 /lib/modules)
+# Building for a repository use the proper build-sysbuild package
+# to determine which kernel-devel packages should be installed.
+BuildRequires:  %{_bindir}/kmodtool
+%{!?kernels:BuildRequires: buildsys-build-%{repo}-kerneldevpkgs-%{?buildforkernels:%{buildforkernels}}%{!?buildforkernels:current}-%{_target_cpu}}
+
+%else
+
+# Building local packages attempt to to use the installed kernel.
+%{?rhel:BuildRequires: kernel-devel}
+%{?fedora:BuildRequires: kernel-devel}
+%{?suse_version:BuildRequires: kernel-source}
+
+%if !%{defined kernels} && !%{defined build_src_rpm}
+    %if 0%{?rhel}%{?fedora}%{?suse_version}
+        %define kernels %(ls -1 /usr/src/kernels)
+    %else
+        %define kernels %(ls -1 /lib/modules)
+    %endif
 %endif
-
-%if 0%{?rhel}%{?fedora}%{?suse_version}
-BuildRequires:             kmod-spl-devel = %{version}
-# In XCP-ng we build for only one kernel at a time
-BuildRequires:             kmod-spl-devel-4.19.0+1 = %{version}
-%global KmodsRequires      kmod-spl
-%global KmodsDevelRequires kmod-spl-devel
-%global KmodsMetaRequires  spl-kmod
 %endif
 
 # LDFLAGS are not sanitized by arch/*/Makefile for these architectures.
@@ -94,7 +104,7 @@ BuildRequires:             kmod-spl-devel-4.19.0+1 = %{version}
 # Kmodtool does its magic here.  A patched version of kmodtool is shipped
 # with the source rpm until kmod development packages are supported upstream.
 # https://bugzilla.rpmfusion.org/show_bug.cgi?id=2714
-%{expand:%(bash %{SOURCE10} --target %{_target_cpu} %{?repo:--repo %{?repo}} --kmodname %{name} %{?buildforkernels:--%{buildforkernels}} --devel %{?prefix:--prefix "%{?prefix}"} %{?kernels:--for-kernels "%{?kernels}"} %{?kernelbuildroot:--buildroot "%{?kernelbuildroot}"} 2>/dev/null) }
+%{expand:%(bash %{SOURCE10} --target %{_target_cpu} %{?repo:--repo %{?repo}} --kmodname %{name} %{?buildforkernels:--%{buildforkernels}} --devel %{?prefix:--prefix "%{?prefix}"} %{?kernels:--for-kernels "%{?kernels}"} %{?kernelbuildroot:--buildroot "%{?kernelbuildroot}"} --obsolete-name spl --obsolete-version 0.8 2>/dev/null) }
 
 
 %description
@@ -105,7 +115,7 @@ This package contains the ZFS kernel modules.
 %{?kmodtool_check}
 
 # Print kmodtool output for debugging purposes:
-bash %{SOURCE10}  --target %{_target_cpu} %{?repo:--repo %{?repo}} --kmodname %{name} %{?buildforkernels:--%{buildforkernels}} --devel %{?prefix:--prefix "%{?prefix}"} %{?kernels:--for-kernels "%{?kernels}"} %{?kernelbuildroot:--buildroot "%{?kernelbuildroot}"} 2>/dev/null
+bash %{SOURCE10}  --target %{_target_cpu} %{?repo:--repo %{?repo}} --kmodname %{name} %{?buildforkernels:--%{buildforkernels}} --devel %{?prefix:--prefix "%{?prefix}"} %{?kernels:--for-kernels "%{?kernels}"} %{?kernelbuildroot:--buildroot "%{?kernelbuildroot}"} --obsolete-name spl --obsolete-version 0.8 2>/dev/null
 
 %if %{with debug}
     %define debug --enable-debug
@@ -113,33 +123,11 @@ bash %{SOURCE10}  --target %{_target_cpu} %{?repo:--repo %{?repo}} --kmodname %{
     %define debug --disable-debug
 %endif
 
-%if %{with debug_dmu_tx}
-    %define debug_dmu_tx --enable-debug-dmu-tx
+%if %{with debuginfo}
+    %define debuginfo --enable-debuginfo
 %else
-    %define debug_dmu_tx --disable-debug-dmu-tx
+    %define debuginfo --disable-debuginfo
 %endif
-
-#
-# Allow the overriding of spl locations
-#
-%if %{defined require_splver}
-%define splver %{require_splver}
-%else
-%define splver %{version}
-%endif
-
-%if %{defined require_spldir}
-%define spldir %{require_spldir}
-%else
-%define spldir %{_usrsrc}/spl-%{splver}
-%endif
-
-%if %{defined require_splobj}
-%define splobj %{require_splobj}
-%else
-%define splobj %{spldir}/${kernel_version%%___*}
-%endif
-
 
 # Leverage VPATH from configure to avoid making multiple copies.
 %define _configure ../%{module}-%{version}/configure
@@ -157,10 +145,8 @@ for kernel_version in %{?kernel_versions}; do
         --with-config=kernel \
         --with-linux=%{ksrc} \
         --with-linux-obj=%{kobj} \
-        --with-spl="%{spldir}" \
-        --with-spl-obj="%{splobj}" \
         %{debug} \
-        %{debug_dmu_tx}
+        %{debuginfo}
     make %{?_smp_mflags}
     cd ..
 done
@@ -185,47 +171,3 @@ chmod u+x ${RPM_BUILD_ROOT}%{kmodinstdir_prefix}/*/extra/*/*/*
 
 %clean
 rm -rf $RPM_BUILD_ROOT
-
-%changelog
-* Fri Feb 22 2019 Tony Hutter <hutter2@llnl.gov> - 0.7.13-1
-- Released 0.7.13-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.13
-* Thu Nov 08 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.12-1
-- Released 0.7.12-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.12
-* Thu Sep 13 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.11-1
-- Released 0.7.11-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.11
-* Wed Sep 05 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.10-1
-- Released 0.7.10-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.10
-* Tue May 08 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.9-1
-- Released 0.7.9-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.9
-* Mon Apr 09 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.8-1
-- Released 0.7.8-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.8
-* Wed Mar 14 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.7-1
-- Released 0.7.7-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.7
-* Thu Feb 01 2018 Tony Hutter <hutter2@llnl.gov> - 0.7.6-1
-- Released 0.7.6-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.6
-* Mon Dec 18 2017 Tony Hutter <hutter2@llnl.gov> - 0.7.5-1
-- Released 0.7.5-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.5
-* Thu Dec 07 2017 Tony Hutter <hutter2@llnl.gov> - 0.7.4-1
-- Released 0.7.4-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.4
-* Wed Oct 18 2017 Tony Hutter <hutter2@llnl.gov> - 0.7.3-1
-- Released 0.7.3-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.3
-* Fri Sep 22 2017 Tony Hutter <hutter2@llnl.gov> - 0.7.2-1
-- Released 0.7.2-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.2
-* Tue Aug 8 2017 Tony Hutter <hutter2@llnl.gov> - 0.7.1-1
-- Released 0.7.1-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.1
-* Wed Jul 26 2017 Brian Behlendorf <behlendorf1@llnl.gov> - 0.7.0-1
-- Released 0.7.0-1, detailed release notes are available at:
-- https://github.com/zfsonlinux/zfs/releases/tag/zfs-0.7.0
