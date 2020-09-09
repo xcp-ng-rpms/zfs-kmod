@@ -45,7 +45,7 @@
 
 Name:           %{module}-kmod
 
-Version:        0.8.3
+Version:        0.8.4
 Release:        1%{?dist}
 Summary:        Kernel module(s)
 
