@@ -52,7 +52,7 @@
 Name:           %{module}-kmod
 
 Version:        0.8.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Kernel module(s)
 
 Group:          System Environment/Kernel
